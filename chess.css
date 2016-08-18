@@ -1,0 +1,16 @@
+#board{
+    border: solid 1px black;
+    height: 100%;
+    margin: 0 auto;
+}
+
+.chessCell{
+    background-color: #734d26;
+    cursor: pointer;
+    border: none; 
+    width: 75px;
+    height: 75px;
+}
+.chessCellWhite{
+    background-color: #ffff99 !important;
+}
