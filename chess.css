@@ -14,3 +14,18 @@
 .chessCellWhite{
     background-color: #ffff99 !important;
 }
+.chessCellMoveable{
+    background-color: #ffcc00 !important;
+}
+.blackPawn{
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+    background-image: url(http://www.charbase.com/images/glyph/9823);
+}
+.whitePawn{
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+    background-image: url(http://www.charbase.com/images/glyph/9817);
+}

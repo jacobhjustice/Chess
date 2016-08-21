@@ -99,21 +99,36 @@ var Chess = {
               
           } 
           this.moves = this.getMoves();
+          Chess.allPieces.push(this);
     },
     bindPieceMoves: function(){
         this.Piece.prototype.getMoves = function(){
-            console.log("MOVES");
+
             var self = this;
             var moves = [];
             var position = this.position;
             
             if(this.type =="pawn")
             {
-                console.log("PAWN");
+
                 var i = (this.color == 'white') ? -1 : 1;
-                var cell = Chess.findCellByPosition(position.x, position.y + i);
+                var cell = Chess.findCellByPosition(parseInt(position.x), parseInt(position.y) + i);
                 if($(cell).hasClass("empty")){
                     moves.push({x: position.x, y: position.y + i});
+                cell = Chess.findCellByPosition(position.x+1, position.y + i);
+                var opposite;
+                if(this.color == "white")
+                opposite = "black";
+                else
+                opposite = "white;"
+                if($(cell).hasClass(opposite))
+                    moves.push({x: position.x+1, y: position.y + i});
+                
+                cell = Chess.findCellByPosition(position.x-1, position.y + i);
+                if($(cell).hasClass(opposite))
+                    moves.push({x: position.x-11, y: position.y + i});
+                
+                
                 cell = Chess.findCellByPosition(position.x, position.y + i*2);
                 if(this.hasMoved == false && cell.hasClass('empty'))
                     moves.push({x: position.x, y: position.y + i*2});
@@ -130,17 +145,89 @@ var Chess = {
         return undefined;
         return $(".chessCell[data-row='"+y+"'][data-cell='"+x+"'");
     },
+    findPieceByPosition: function(x, y){
+        for(var i = 0; i <=Chess.allPieces.length; i++){
+            var piece = Chess.allPieces[i];
+            if(piece.position.x == x && piece.position.y == y)
+            return piece;
+        }
+        return undefined;
+    },
     load: function(){
+        this.allPieces = [];
         this.bindPieceMoves();
+        this.moving = undefined
             this.players.push(new this.Player("white"));
             this.players.push(new this.Player("black"));
         this.currentColor = 'white';
+        $(".chessCellMoveable").on('click', function(e){
+            console.log("!");
+            $(this).css('cursor', 'default');
+            var p = Chess.moving;
+            var cell = Chess.findCellByPosition(p.position.x, p.position.y);
+            var rstring = p.color + p.type.charAt(0).toUpperCase() + p.type.substring(1);
+            cell.removeClass(p.color).removeClass(rstring);
+            $(this).addClass(p.color).removeClass(rstring);
+            p.position = {x: $(this).attr('data-cell'), y: $(this).attr('data-row')};
+            p.hasMoved = true;
+            console.log(p);
+        });
         $(".chessCell").on('mouseover', function(e){
-            if($(this).hasClass(Chess.currentColor))
+            if($(this).hasClass(Chess.currentColor) || $(this).hasClass('chessCellMoveable'))
                 $(this).css('cursor', 'pointer');
             else
                 $(this).css('cursor', 'default');
         });
+        $(".chessCell").on('click', function(e){
+            if($(this).hasClass('chessCellMoveable')){
+                console.log("!");
+            $(this).css('cursor', 'default');
+            var p = Chess.moving;
+            var opposite;
+            if(p.color == "white")
+                opposite = "black";
+                else
+                opposite = "white;";
+            var cell = Chess.findCellByPosition(p.position.x, p.position.y);
+            var rstring = p.color + p.type.charAt(0).toUpperCase() + p.type.substring(1);
+            cell.removeClass(p.color).removeClass(rstring).addClass('empty');
+            if($(this).hasClass(opposite))
+            {   console.log(opposite);
+                var m = Chess.findPieceByPosition(parseInt($(this).attr('data-cell')), parseInt($(this).attr('data-row')));
+                //remove m
+                m.position = { x: -5, y: -5};
+                $(this).removeClass(opposite).removeClass(opposite + m.type.charAt(0).toUpperCase() + m.type.substring((1)));
+                
+            }
+            $(this).addClass(p.color).addClass(rstring).removeClass('empty');
+            p.position = {x: parseInt($(this).attr('data-cell')), y: parseInt($(this).attr('data-row'))};
+            p.hasMoved = true;
+            for(var i = 0; i < Chess.allPieces.length; i++){
+                var a = Chess.allPieces[i];
+                a.moves = a.getMoves();
+            }
+            console.log(p);
+            $(".chessCellMoveable").removeClass("chessCellMoveable");
+            if(Chess.currentColor == "white")
+                Chess.currentColor = "black";
+            else
+                Chess.currentColor = "white";
+                
+                
+            }
+            else{
+            $(".chessCellMoveable").removeClass("chessCellMoveable");
+            if(!$(this).hasClass(Chess.currentColor))
+                return;
+            var piece = Chess.findPieceByPosition($(this).attr('data-cell'), $(this).attr('data-row'))
+            for(var i = 0; i<piece.moves.length; i++){
+                var m = piece.moves[i];
+                $(".chessCell[data-cell='"+m.x +"'][data-row='"+m.y+"'").addClass('chessCellMoveable');
+            }
+            Chess.moving = piece;
+            }
+        });
+        
     },
 };
 
@@ -154,7 +241,6 @@ $(document).ready(function(){
             $(cell).attr('data-row', i);
             $(cell).attr('data-cell', n);
             $(cell).addClass('chessCell');
-            console.log(n +", " +i);
             $(cell).addClass("empty");
             if((n - i) % 2 == 1 || (n-i)%2 == -1)
                 $(cell).addClass('chessCellWhite');
