@@ -2,7 +2,7 @@
 
 var Chess = {
     players: [],
-        Player: function (color){
+    Player: function (color){
             this.pieces = [];
             this.color = color;
             for(var i = 1; i<= 16; i++){
@@ -10,8 +10,8 @@ var Chess = {
                 this.pieces.push(p);
             }
         },
-        
-      Piece: function(color, code){
+    check: undefined,
+    Piece: function(color, code){
           this.color = color;
           this.moves = [];
           this.hasMoved = false;
@@ -381,11 +381,11 @@ var Chess = {
             if($(this).hasClass(Chess.currentColor) || $(this).hasClass('chessCellMoveable'))
                 $(this).css('cursor', 'pointer');
             else
-                $(this).css('/cursor', 'default');
+                $(this).css('cursor', 'default');
         });
         $(".chessCell").on('click', function(e){
             if($(this).hasClass('chessCellMoveable')){
-                console.log("!");
+                Chess.check = undefined;
             $(this).css('cursor', 'default');
             var p = Chess.moving;
             var opposite;
@@ -410,6 +410,19 @@ var Chess = {
             for(var i = 0; i < Chess.allPieces.length; i++){
                 var a = Chess.allPieces[i];
                 a.moves = a.getMoves();
+                //set check
+                if(a.moves.length > 0)
+                    {
+                        var king = Chess.findKing(opposite);
+                        if(Chess.check == undefined){
+                        for(var counter = 0; counter < a.moves.length; counter++){
+                            if(a.moves[counter].x == king.position.x && a.moves[counter].y == king.position.y){
+                                Chess.check = opposite;
+                                break;
+                            }
+                        }
+                        }
+                    }
             }
             console.log(p);
             $(".chessCellMoveable").removeClass("chessCellMoveable");
