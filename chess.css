@@ -29,3 +29,64 @@
     background-repeat: no-repeat;
     background-image: url(http://www.charbase.com/images/glyph/9817);
 }
+.blackKnight{
+    background-image: url(http://www.charbase.com/images/glyph/9822);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.whiteKnight{
+    background-image: url(http://www.charbase.com/images/glyph/9816);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.blackRook{
+    background-image: url(http://www.charbase.com/images/glyph/9820);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.whiteRook{
+    background-image: url(http://www.charbase.com/images/glyph/9814);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.blackBishop{
+    background-image: url(http://www.charbase.com/images/glyph/9821);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+
+.whiteBishop{
+    background-image: url(http://www.charbase.com/images/glyph/9815);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.whiteQueen{
+    background-image: url(http://www.charbase.com/images/glyph/9813);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.whiteKing{
+    background-image: url(http://www.charbase.com/images/glyph/9812);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.blackQueen{
+    background-image: url(http://www.charbase.com/images/glyph/9819);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
+.blackKing{
+    background-image: url(http://www.charbase.com/images/glyph/9818);
+    background-position: center;
+    background-size: 50px;
+    background-repeat: no-repeat;
+}
