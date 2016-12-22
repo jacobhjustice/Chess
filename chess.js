@@ -1,21 +1,34 @@
 /*global $*/
 
+// Check is recorded, but it needs to be announced
+// Can move into check if the opponents move that could take the king is currently blocked
+// Upon checking, need to remove all moves that will not take out of check from other pieces
+// Show pieces that are captured on sidebars
+// Special moves (en pessaunt, castling, etc)
+
+// Solutions:
+// make an array containing all moves that are possible without current piece existing
+// Check move against the piecesChecking array
+// add array of locations of moves that will put out of check on each piece
 var Chess = {
     players: [],
     Player: function (color){
             this.pieces = [];
             this.color = color;
             for(var i = 1; i<= 16; i++){
-                var p = new Chess.Piece(color, i);
+                var p = new Chess.Piece(color, i, this);
                 this.pieces.push(p);
             }
         },
     check: undefined,
-    Piece: function(color, code){
+    piecesChecking: [],
+    Piece: function(color, code, player){
           this.color = color;
           this.moves = [];
+          this.movesToRuinCheck = [];
           this.hasMoved = false;
           this.setUp = true;
+          this.player = player;
           //Create variable to determine direction?
           var r;
           //change this in future to allow swap side of board
@@ -97,6 +110,7 @@ var Chess = {
           } 
           this.moves = this.getMoves();
           Chess.allPieces.push(this);
+
     },
     getRivalsFutureMoves: function(testMove){
         //used in order to get moves for check and also determine possible losses from moving    
@@ -115,13 +129,12 @@ var Chess = {
         return ret;
     },
     bindPieceMoves: function() {
-        this.Piece.prototype.willCauseSelfCheck = function(testMove){
+        this.Piece.prototype.willCauseSelfCheck = function(testMove, checkPossible){
             //made to ensure that moving a piece here will not put player into check  
-            //var tPiece = 
             if(this.setUp)
                 return false;
             var piece = $.extend({}, this);
-            console.log(piece);
+            console.log(this.type);
             piece.position = testMove;
             var color = piece.color;
             var king;
@@ -141,19 +154,38 @@ var Chess = {
                     m.push({x: testPiece.position.x - 1, y: testPiece.position.y + i2});
                 }
                 else
-                    m = testPiece.getMoves();
-                    console.log(m);
+                    m = testPiece.getMoves(true);
                 for(var count = 0; count<m.length; count++){
                     if(m[count].x == king.position.x && m[count].y == king.position.y)
                             return true;
                 }
                 }
             }
+            var opposite = (this.color == "white") ? Chess.players[0] : Chess.players[1];
+            
+            //if(!checkPossible && this.movingPieceWillCauseSelfCheck(testMove, king, opposite))
+              //  return true;
             return false;
         };
-        this.Piece.prototype.getMoves = function(){
-
-            var self = this;
+        this.Piece.prototype.movingPieceWillCauseSelfCheck = function(testMove, king, otherPlayer){
+            
+            var cell = Chess.findCellByPosition(this.position.x, this.position.y);
+            $(cell).addClass('empty');
+            for(var i = 0; i < otherPlayer.pieces.length; i ++){
+                var m = otherPlayer.pieces[i].getMoves(true, true);
+                for(var o = 0; o < m.length; o++){
+                    if(m[o].x == king.position.x && m[o].y == king.position.y)
+                    {
+                        $(cell).removeClass('empty');
+                        console.log("NO GO");
+                        return true;
+                    }
+                }
+            }
+            $(cell).removeClass('empty');
+            return false;
+        };
+        this.Piece.prototype.getMoves = function(checkPossible, checkPossible2){
             var moves = [];
             var position = this.position;
             var opposite;
@@ -161,186 +193,197 @@ var Chess = {
                 opposite = "black";
                 else
                 opposite = "white";
-                
-            if(this.type =="pawn")
-            {
-
-                var i = (this.color == 'white') ? -1 : 1;
-                var cell = Chess.findCellByPosition(parseInt(position.x), parseInt(position.y) + i);
-                if($(cell).hasClass("empty")){
-                    moves.push({x: position.x, y: position.y + i});
-                cell = Chess.findCellByPosition(position.x+1, position.y + i);
-                
-   
-                if($(cell).hasClass(opposite))
-                
-                    moves.push({x: position.x+1, y: position.y + i});
-                
-                cell = Chess.findCellByPosition(position.x-1, position.y + i);
-                if($(cell).hasClass(opposite))
-                    moves.push({x: position.x-1, y: position.y + i});
-                
-                
-                cell = Chess.findCellByPosition(position.x, position.y + i*2);
-                if(this.hasMoved == false && cell.hasClass('empty'))
-                    moves.push({x: position.x, y: position.y + i*2});
-                }
-            
-            }
-            if(this.type == "knight"){
-                    var cell = Chess.findCellByPosition(this.position.x - 2, this.position.y - 1);
-                    if( cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x - 2, y: this.position.y - 1});
-                    cell = Chess.findCellByPosition(this.position.x - 2, this.position.y + 1);
-                    if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x - 2, y: this.position.y + 1});
-                    cell = Chess.findCellByPosition(this.position.x - 1, this.position.y - 2);
-                    if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x - 1, y: this.position.y - 2});
-                    cell = Chess.findCellByPosition(this.position.x - 1, this.position.y + 2);
-                    if(cell&& ( $(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x - 1, y: this.position.y +2});
-                    cell = Chess.findCellByPosition(this.position.x + 2, this.position.y - 1);
-                    if( cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x + 2, y: this.position.y - 1});
-                    cell = Chess.findCellByPosition(this.position.x + 2, this.position.y + 1);
-                    if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x + 2, y: this.position.y + 1});
-                    cell = Chess.findCellByPosition(this.position.x + 1, this.position.y - 2);
-                    if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x + 1, y: this.position.y - 2});
-                    cell = Chess.findCellByPosition(this.position.x + 1, this.position.y + 2);
-                    if(cell&& ( $(cell).hasClass('empty') || $(cell).hasClass(opposite)))
-                        moves.push({x: this.position.x + 1, y: this.position.y +2});
-                        
+                if(this.type =="pawn")
+                {
+    
+                    var i = (this.color == 'white') ? -1 : 1;
+                    var cell = Chess.findCellByPosition(parseInt(position.x), parseInt(position.y) + i);
+                    if($(cell).hasClass("empty")){
+                        if(!this.willCauseSelfCheck({x: this.position.x, y: this.position.y + i})){
+                        moves.push({x: position.x, y: position.y + i});
+                            
+                        }
+                    cell = Chess.findCellByPosition(position.x+1, position.y + i);
                     
+       
+                    if($(cell).hasClass(opposite))
+                        moves.push({x: position.x+1, y: position.y + i});
+                    
+                    cell = Chess.findCellByPosition(position.x-1, position.y + i);
+                    if($(cell).hasClass(opposite))
+                        moves.push({x: position.x-1, y: position.y + i});
+                    
+                    
+                    cell = Chess.findCellByPosition(position.x, position.y + i*2);
+                    if(this.hasMoved == false && cell.hasClass('empty'))
+                        moves.push({x: position.x, y: position.y + i*2});
+                    }
+                
                 }
-                if(this.type=="king"){
-                    for(var i = -1; i <= 1; i++){
+                if(this.type == "knight"){
+                        var cell = Chess.findCellByPosition(this.position.x - 2, this.position.y - 1);
+                        if( cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x - 2, y: this.position.y - 1});
+                        cell = Chess.findCellByPosition(this.position.x - 2, this.position.y + 1);
+                        if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x - 2, y: this.position.y + 1});
+                        cell = Chess.findCellByPosition(this.position.x - 1, this.position.y - 2);
+                        if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x - 1, y: this.position.y - 2});
+                        cell = Chess.findCellByPosition(this.position.x - 1, this.position.y + 2);
+                        if(cell&& ( $(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x - 1, y: this.position.y +2});
+                        cell = Chess.findCellByPosition(this.position.x + 2, this.position.y - 1);
+                        if( cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x + 2, y: this.position.y - 1});
+                        cell = Chess.findCellByPosition(this.position.x + 2, this.position.y + 1);
+                        if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x + 2, y: this.position.y + 1});
+                        cell = Chess.findCellByPosition(this.position.x + 1, this.position.y - 2);
+                        if(cell && ($(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x + 1, y: this.position.y - 2});
+                        cell = Chess.findCellByPosition(this.position.x + 1, this.position.y + 2);
+                        if(cell&& ( $(cell).hasClass('empty') || $(cell).hasClass(opposite)))
+                            moves.push({x: this.position.x + 1, y: this.position.y +2});
+                            
                         
-                        for(var j = -1; j <= 1; j++){
-                            console.log("#");
-                            if(!(i== 0 && j == 0)){
-                                cell = Chess.findCellByPosition(this.position.x + i, this.position.y + j);
-                                if(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                                    var move = {x: this.position.x + i, y: this.position.y + j};
-                                    if(!this.willCauseSelfCheck(move))
-                                        moves.push(move);
+                    }
+                    if(this.type=="king"){
+                        for(var i = -1; i <= 1; i++){
+                            
+                            for(var j = -1; j <= 1; j++){
+                                if(!(i== 0 && j == 0)){
+                                    cell = Chess.findCellByPosition(this.position.x + i, this.position.y + j);
+                                    if(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                                        var move = {x: this.position.x + i, y: this.position.y + j};
+                                        if(!this.willCauseSelfCheck(move))
+                                            moves.push(move);
+                                    }
+                                    
                                 }
-                                
                             }
                         }
                     }
+                    if(this.type=="bishop" || this.type == "queen"){
+                        var x = 1; var y = 1;
+                        var cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            var move = {x: this.position.x + x, y: this.position.y + y};
+                           if(!checkPossible && !this.willCauseSelfCheck(move, checkPossible2))
+                                            moves.push(move);
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            x++;
+                            y++;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                        x = 1, y = -1;
+                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            x++;
+                            y--;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                        x = -1, y = 1;
+                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            x--;
+                            y++;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                        x = -1, y = -1;
+                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            x--;
+                            y--;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                    }
+                    if(this.type =="rook" || this.type == "queen"){
+                        var x = 0; var y = 1;
+                        var cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            y++;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                        x = 1, y = 0;
+                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            x++;
+                            
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                        x = -1, y = 0;
+                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            x--;
+                            y;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                        x = 0, y = -1;
+                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
+                            moves.push({x: this.position.x + x, y: this.position.y + y});
+                            if($(cell).hasClass(opposite))
+                                {
+                                    x = -99;
+                                    y = -99;
+                                }
+                            
+                            y--;
+                            cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
+                        }
+                    }
+            if(Chess.check != undefined)
+            {
+                if(this.type != "king")
+                {
+                    for(var i = 0; i < this.moves.length; i++)
+                    {
+                        //ignore king because it checks seperately
+                        var legal = false;
+                    }
                 }
-                if(this.type=="bishop" || this.type == "queen"){
-                    var x = 1; var y = 1;
-                    var cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        x++;
-                        y++;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                    x = 1, y = -1;
-                    cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        x++;
-                        y--;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                    x = -1, y = 1;
-                    cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        x--;
-                        y++;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                    x = -1, y = -1;
-                    cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        x--;
-                        y--;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                }
-                if(this.type =="rook" || this.type == "queen"){
-                    var x = 0; var y = 1;
-                    var cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        y++;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                    x = 1, y = 0;
-                    cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        x++;
-                        
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                    x = -1, y = 0;
-                    cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        x--;
-                        y;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                    x = 0, y = -1;
-                    cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    while(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
-                        moves.push({x: this.position.x + x, y: this.position.y + y});
-                        if($(cell).hasClass(opposite))
-                            {
-                                x = -99;
-                                y = -99;
-                            }
-                        
-                        y--;
-                        cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
-                    }
-                }
-
-            
+            }
             this.setUp = false;
             return moves;
         };
@@ -383,9 +426,14 @@ var Chess = {
             else
                 $(this).css('cursor', 'default');
         });
+        $(".checked").on('click', function(e){
+            $(".checked").css("visibility", "hidden"); 
+            $(".checked").css("cursor", "default");
+        });
         $(".chessCell").on('click', function(e){
             if($(this).hasClass('chessCellMoveable')){
                 Chess.check = undefined;
+                Chess.piecesChecking = [];
             $(this).css('cursor', 'default');
             var p = Chess.moving;
             var opposite;
@@ -397,41 +445,69 @@ var Chess = {
             var rstring = p.color + p.type.charAt(0).toUpperCase() + p.type.substring(1);
             cell.removeClass(p.color).removeClass(rstring).addClass('empty');
             if($(this).hasClass(opposite))
-            {   console.log(opposite);
+            {
                 var m = Chess.findPieceByPosition(parseInt($(this).attr('data-cell')), parseInt($(this).attr('data-row')));
                 //remove m
                 m.position = { x: -5, y: -5};
                 $(this).removeClass(opposite).removeClass(opposite + m.type.charAt(0).toUpperCase() + m.type.substring((1)));
-                
             }
             $(this).addClass(p.color).addClass(rstring).removeClass('empty');
             p.position = {x: parseInt($(this).attr('data-cell')), y: parseInt($(this).attr('data-row'))};
             p.hasMoved = true;
             for(var i = 0; i < Chess.allPieces.length; i++){
                 var a = Chess.allPieces[i];
+                a.movesToRuinCheck = [];
                 a.moves = a.getMoves();
                 //set check
                 if(a.moves.length > 0)
                     {
                         var king = Chess.findKing(opposite);
-                        if(Chess.check == undefined){
                         for(var counter = 0; counter < a.moves.length; counter++){
                             if(a.moves[counter].x == king.position.x && a.moves[counter].y == king.position.y){
                                 Chess.check = opposite;
+                                Chess.piecesChecking.push(a);
+                                a.movesToRuinCheck.push(a.position)
+                                //check queen bishop and rook
+                                if(a.type == "rook" || a.type == "queen")
+                                {
+                                    if(a.position.x == king.position.x)
+                                    {
+                                        var p = (a.position.y > king.position.y) ? king.position.y : a.position.y
+                                        var z = (a.position.y < king.position.y) ? king.position.y : a.position.y
+                                        for(var o = p + 1; o < z ; o++)
+                                        {
+                                            a.movesToRuinCheck.push({x: a.position.x, y: o})
+                                        }
+                                    }
+                                    if(a.position.y == king.position.y)
+                                    {
+                                        var p = (a.position.x > king.position.x) ? king.position.x : a.position.x
+                                        var z = (a.position.x < king.position.x) ? king.position.x : a.position.x
+                                        for(var o = p + 1; o < z - 1; o++)
+                                        {
+                                            a.movesToRuinCheck.push({x: o, y: a.position.y})
+                                        }
+                                    }
+                                }
                                 break;
                             }
                         }
-                        }
+                        
                     }
             }
-            console.log(p);
             $(".chessCellMoveable").removeClass("chessCellMoveable");
+            $(".checked").css("visibility", "hidden")
+            if(Chess.check == "black" || Chess.check == "white")
+            {
+                $(".checked").css("visibility", "visible");
+                $(".checked").css("cursor", "pointer");
+            }
             if(Chess.currentColor == "white")
                 Chess.currentColor = "black";
             else
                 Chess.currentColor = "white";
-            Chess.movine = undefined;
-                
+            Chess.moving = undefined;
+            
             }
             else{
             $(".chessCellMoveable").removeClass("chessCellMoveable");
