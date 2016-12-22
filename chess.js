@@ -5,6 +5,8 @@
 // Upon checking, need to remove all moves that will not take out of check from other pieces
 // Show pieces that are captured on sidebars
 // Special moves (en pessaunt, castling, etc)
+//pawn --> queen
+
 
 // Solutions:
 // make an array containing all moves that are possible without current piece existing
@@ -22,6 +24,27 @@ var Chess = {
         },
     check: undefined,
     piecesChecking: [],
+    checkGameOver: function(){
+        var count = 0;
+        if(Chess.check == "white")
+        {
+            for(var i = 0; i < Chess.players[0].pieces.length; i++)
+                count = count + Chess.players[0].pieces[i].moves.length;
+            if(count==0)
+            {
+                console.log("BLACK WINS");
+            }
+        }
+        else if(Chess.check == "black")
+        {
+            for(var i = 0; i < Chess.players[1].pieces.length; i++)
+                count = count + Chess.players[1].pieces[i].moves.length;
+            if(count==0)
+            {
+                console.log("White WINS");
+            }
+        }
+    },
     Piece: function(color, code, player){
           this.color = color;
           this.moves = [];
@@ -120,10 +143,10 @@ var Chess = {
         var ret;
         for(var i =0; i <Chess.players.length; i++){
             if(Chess.players[i].color == col){
-            for(var c = 0;  c < Chess.players[i].pieces.length; c++){
-                if(Chess.players[i].pieces[c].type == "king")
-                ret = Chess.players[i].pieces[c];
-            }
+                for(var c = 0;  c < Chess.players[i].pieces.length; c++){
+                    if(Chess.players[i].pieces[c].type == "king")
+                    ret = Chess.players[i].pieces[c];
+                }
             }
         }
         return ret;
@@ -134,7 +157,6 @@ var Chess = {
             if(this.setUp)
                 return false;
             var piece = $.extend({}, this);
-            console.log(this.type);
             piece.position = testMove;
             var color = piece.color;
             var king;
@@ -177,7 +199,6 @@ var Chess = {
                     if(m[o].x == king.position.x && m[o].y == king.position.y)
                     {
                         $(cell).removeClass('empty');
-                        console.log("NO GO");
                         return true;
                     }
                 }
@@ -205,7 +226,6 @@ var Chess = {
                         }
                     cell = Chess.findCellByPosition(position.x+1, position.y + i);
                     
-       
                     if($(cell).hasClass(opposite))
                         moves.push({x: position.x+1, y: position.y + i});
                     
@@ -250,10 +270,10 @@ var Chess = {
                     }
                     if(this.type=="king"){
                         for(var i = -1; i <= 1; i++){
-                            
                             for(var j = -1; j <= 1; j++){
-                                if(!(i== 0 && j == 0)){
+                                if((i!= 0 || j != 0)){
                                     cell = Chess.findCellByPosition(this.position.x + i, this.position.y + j);
+                                  //  console.log(cell);
                                     if(cell && ($(cell).hasClass(opposite) || $(cell).hasClass('empty'))){
                                         var move = {x: this.position.x + i, y: this.position.y + j};
                                         if(!this.willCauseSelfCheck(move))
@@ -263,6 +283,7 @@ var Chess = {
                                 }
                             }
                         }
+                      //  console.log(moves);
                     }
                     if(this.type=="bishop" || this.type == "queen"){
                         var x = 1; var y = 1;
@@ -373,16 +394,32 @@ var Chess = {
                             cell = Chess.findCellByPosition(this.position.x + x, this.position.y + y);
                         }
                     }
-            if(Chess.check != undefined)
+            if(Chess.check == this.color)
             {
-                if(this.type != "king")
+                var realmoves = []
+
+                if(Chess.piecesChecking.length < 2)//consider revising
                 {
                     for(var i = 0; i < this.moves.length; i++)
                     {
-                        //ignore king because it checks seperately
+                        //Use king to add additional squares if in check and will get out of check
+                    //    console.log(this);
                         var legal = false;
+                        for(var j = 0; !legal && j < Chess.piecesChecking[0].movesToRuinCheck.length; j++)
+                        {
+                     //       console.log(Chess.piecesChecking[0].movesToRuinCheck[j])
+                       //     console.log(this.moves[i]);
+                            if(Chess.piecesChecking[0].movesToRuinCheck[j].y == this.moves[i].y && Chess.piecesChecking[0].movesToRuinCheck[j].x == this.moves[i].x)
+                            legal = true;
+                        }
+                        if(legal)
+                            realmoves.push(this.moves[i]);
                     }
                 }
+                console.log(moves);
+                console.log(realmoves);
+                if(this.type !="king")
+                moves = realmoves
             }
             this.setUp = false;
             return moves;
@@ -409,7 +446,6 @@ var Chess = {
             this.players.push(new this.Player("black"));
         this.currentColor = 'white';
         $(".chessCellMoveable").on('click', function(e){
-            console.log("!");
             $(this).css('cursor', 'default');
             var p = Chess.moving;
             var cell = Chess.findCellByPosition(p.position.x, p.position.y);
@@ -418,7 +454,6 @@ var Chess = {
             $(this).addClass(p.color).removeClass(rstring);
             p.position = {x: $(this).attr('data-cell'), y: $(this).attr('data-row')};
             p.hasMoved = true;
-            console.log(p);
         });
         $(".chessCell").on('mouseover', function(e){
             if($(this).hasClass(Chess.currentColor) || $(this).hasClass('chessCellMoveable'))
@@ -451,13 +486,20 @@ var Chess = {
                 m.position = { x: -5, y: -5};
                 $(this).removeClass(opposite).removeClass(opposite + m.type.charAt(0).toUpperCase() + m.type.substring((1)));
             }
-            $(this).addClass(p.color).addClass(rstring).removeClass('empty');
             p.position = {x: parseInt($(this).attr('data-cell')), y: parseInt($(this).attr('data-row'))};
             p.hasMoved = true;
+            if(p.type == "pawn" && (p.position.y == 1 || p.position.y == 8))
+            {
+                p.type = "queen"
+                rstring = p.color + p.type.charAt(0).toUpperCase() + p.type.substring(1);
+            }
+            $(this).addClass(p.color).addClass(rstring).removeClass('empty');
             for(var i = 0; i < Chess.allPieces.length; i++){
+                console.log(i);
                 var a = Chess.allPieces[i];
                 a.movesToRuinCheck = [];
                 a.moves = a.getMoves();
+                
                 //set check
                 if(a.moves.length > 0)
                     {
@@ -466,8 +508,10 @@ var Chess = {
                             if(a.moves[counter].x == king.position.x && a.moves[counter].y == king.position.y){
                                 Chess.check = opposite;
                                 Chess.piecesChecking.push(a);
-                                a.movesToRuinCheck.push(a.position)
-                                //check queen bishop and rook
+                                a.movesToRuinCheck.push(a.position);
+                                if(a.movesToRuinCheck.length > 0)
+                                console.log("YES");
+                                //check queen bishop  
                                 if(a.type == "rook" || a.type == "queen")
                                 {
                                     if(a.position.x == king.position.x)
@@ -489,12 +533,13 @@ var Chess = {
                                         }
                                     }
                                 }
-                                break;
                             }
+                            
                         }
                         
                     }
             }
+            Chess.checkGameOver();
             $(".chessCellMoveable").removeClass("chessCellMoveable");
             $(".checked").css("visibility", "hidden")
             if(Chess.check == "black" || Chess.check == "white")
@@ -507,7 +552,6 @@ var Chess = {
             else
                 Chess.currentColor = "white";
             Chess.moving = undefined;
-            
             }
             else{
             $(".chessCellMoveable").removeClass("chessCellMoveable");
